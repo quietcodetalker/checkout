@@ -1,0 +1,178 @@
+version: "3"
+
+services:
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=local
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka-1:9092,kafka-2:9092,kafka-3:9092
+      - KAFKA_CLUSTERS_0_ZOOKEEPER=zookeeper:2181
+
+  zookeeper:
+    image: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+
+  kafka-1:
+    image: wurstmeister/kafka
+    ports:
+      - "9095:9094"
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_LISTENERS: INTERNAL://kafka-1:9092,OUTSIDE://kafka-1:9094
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka-1:9092,OUTSIDE://kafka-1:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,OUTSIDE:PLAINTEXT
+
+      KAFKA_LOG_DIRS: /kafka/logs
+      KAFKA_BROKER_ID: 500
+      KAFKA_offsets_topic_replication_factor: 3
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  kafka-2:
+    image: wurstmeister/kafka
+    ports:
+      - "9096:9094"
+    environment:
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENERS: INTERNAL://kafka-2:9092,OUTSIDE://kafka-2:9094
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka-2:9092,OUTSIDE://kafka-2:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,OUTSIDE:PLAINTEXT
+      KAFKA_LOG_DIRS: /kafka/logs
+      KAFKA_BROKER_ID: 501
+      KAFKA_offsets_topic_replication_factor: 3
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  kafka-3:
+    image: wurstmeister/kafka
+    ports:
+      - "9097:9094"
+    environment:
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_LISTENERS: INTERNAL://kafka-3:9092,OUTSIDE://kafka-3:9094
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka-3:9092,OUTSIDE://kafka-3:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,OUTSIDE:PLAINTEXT
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LOG_DIRS: /kafka/logs
+      KAFKA_BROKER_ID: 502
+      KAFKA_offsets_topic_replication_factor: 3
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  stock_db:
+    image: postgres:12-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=stock
+    healthcheck:
+      test: pg_isready -U postgres -d stock
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5433:5432"
+    volumes:
+      - volume_stock_db:/var/lib/postgresql/data
+
+  billing_db:
+    image: postgres:12-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=billing
+    healthcheck:
+      test: pg_isready -U postgres -d billing
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5434:5432"
+    volumes:
+      - volume_billing_db:/var/lib/postgresql/data
+
+  orders_db:
+    image: postgres:12-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=orders
+    healthcheck:
+      test: pg_isready -U postgres -d orders
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5435:5432"
+    volumes:
+      - volume_orders_db:/var/lib/postgresql/data
+
+  notifications_db:
+    image: postgres:12-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=notifications
+    healthcheck:
+      test: pg_isready -U postgres -d notifications
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5436:5432"
+    volumes:
+      - volume_notifications_db:/var/lib/postgresql/data
+
+  orders:
+    image: gitlab-registry.ozon.dev/unknownspacewalker/homework3/orders:latest
+    volumes:
+      - ${PWD}/configs/orders_docker_compose.yaml:/src/configs/orders.yaml
+    depends_on:
+      - orders_db
+    restart: always
+
+  stock:
+    image: gitlab-registry.ozon.dev/unknownspacewalker/homework3/stock:latest
+    volumes:
+      - ${PWD}/configs/stock_docker_compose.yaml:/src/configs/stock.yaml
+    depends_on:
+      - stock_db
+    restart: always
+
+  billing:
+    image: gitlab-registry.ozon.dev/unknownspacewalker/homework3/billing:latest
+    volumes:
+      - ${PWD}/configs/billing_docker_compose.yaml:/src/configs/billing.yaml
+    depends_on:
+      - billing_db
+    restart: always
+
+  notifications:
+    image: gitlab-registry.ozon.dev/unknownspacewalker/homework3/notifications:latest
+    volumes:
+      - ${PWD}/configs/notifications_docker_compose.yaml:/src/configs/notifications.yaml
+    depends_on:
+      - notifications_db
+    restart: always
+
+  ntrigger:
+    image: gitlab-registry.ozon.dev/unknownspacewalker/homework3/ntrigger:latest
+    restart: always
+
+volumes:
+  volume_stock_db:
+  volume_billing_db:
+  volume_orders_db:
+  volume_notifications_db:

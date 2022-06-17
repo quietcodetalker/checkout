@@ -1,0 +1,11 @@
+db:
+  host: stock_db
+  port: 5432
+  user: postgres
+  password: postgres
+  name: stock
+  sslmode: disable
+brokers:
+  - kafka-1:9094
+  - kafka-2:9094
+  - kafka-3:9094

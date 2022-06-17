@@ -1,0 +1,1 @@
+* * * * * echo "{}" | kcat -P -b kafka-1:9094 -t check

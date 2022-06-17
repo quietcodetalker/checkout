@@ -1,0 +1,11 @@
+db:
+  host: 127.0.0.1
+  port: 5433
+  user: postgres
+  password: postgres
+  name: stock
+  sslmode: disable
+brokers:
+  - localhost:9095
+  - localhost:9096
+  - localhost:9097
